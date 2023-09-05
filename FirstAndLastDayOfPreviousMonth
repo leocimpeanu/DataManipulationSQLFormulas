@@ -1,0 +1,6 @@
+DECLARE @dtnow DATETIME2 = GETDATE()
+
+--First day of last month
+SELECT DATEADD(m,-1,DATEADD(mm, DATEDIFF(m,0,@dtnow), 0))
+--Last day of last month
+SELECT DATEADD(d,-1,DATEADD(mm, DATEDIFF(m,0,@dtnow),0))
