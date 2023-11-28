@@ -1,0 +1,22 @@
+ex 1:
+
+-- Populate the list of IDs by concatenating each row under the same parent (originator)
+	update #FinalPopulation
+	SET Profile_Related_CIDs = STUFF((SELECT ',' + CAST(s.Related_CID AS VARCHAR)
+										                FROM #Related_CIDs s
+										                WHERE s.Original_CID = t_ACC_CID
+											                AND s.Original_CID <> s.Related_CID
+										                FOR XML PATH('')),1,1,'')
+
+
+ex 2:
+
+	SELECT t.CID, t.APD_ACC_ID, STUFF(
+	                                  (SELECT ',' + CAST(s.t_CID AS VARCHAR(100))	
+	                                   FROM #FinalPopulation s
+	                                   WHERE s.CID = t.CID
+	                                   GROUP BY s.CID, s.APD_ACC_ID, s.t_CID
+	                                   FOR XML PATH('')),1,1,'') AS Original_CID
+	INTO #FinalPopulation2
+	FROM #FinalPopulation AS t
+	GROUP BY t.CID, t.APD_ACC_ID
