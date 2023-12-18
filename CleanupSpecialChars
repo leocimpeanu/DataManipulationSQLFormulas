@@ -1,0 +1,135 @@
+
+
+  -- Convert special chars to clean chars
+	UPDATE chg
+	SET chg.i_First_name_Clean = First_name_Clean.CleanString
+	FROM #Changes chg
+	CROSS APPLY dbo.CleanupSpecialChars (First_name) as First_name_Clean
+
+
+/* dbo.CleanupSpecialChars function code: */
+
+USE [db_name]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER FUNCTION [dbo].[CleanupSpecialChars] (
+           @String NVARCHAR(4000))
+
+RETURNS 
+@Results TABLE (CleanString NVARCHAR(4000))
+
+AS
+BEGIN
+	DECLARE @Result NVARCHAR(4000) = '';
+
+    IF @String IS NOT NULL
+    BEGIN
+		SET @String  = LTRIM(RTRIM(@String));
+
+        
+		SELECT @Result = @Result +
+						ISNULL(
+								(SELECT TOP (1) STC_ToCleanChar --Clear alphabetical special chars
+								 FROM dbo.SpecialChar_To_CleanChar WITH (NOLOCK) 
+								 WHERE UNICODE(STC_FromSpecialChar) = UNICODE(SUBSTRING(@String, Num,1)))
+								 ,
+								 CASE 
+									 WHEN   UNICODE(SUBSTRING(@String, Num,1)) < 31 OR UNICODE(SUBSTRING(@String, Num,1)) > 127
+									 THEN ''--Clear non-alphabetical special chars
+									 ELSE SUBSTRING(@String, Num,1) --Not a special char, keep as is
+								 END
+							)
+        FROM dbo.Numbers N WITH (NOLOCK)
+        WHERE N.Num <= LEN(@String) AND N.Num <= 4000       -- hint for estimated numbers of rows
+        ORDER BY N.Num
+
+
+END;
+
+/* dbo.SpecialChar_To_CleanChar table content: */
+
+CREATE TABLE dbo.SpecialChar_To_CleanChar ( [STC_FromSpecialChar] nvarchar(5), [STC_ToCleanChar] nvarchar(5), [STC_UnicodeChar] varchar(10) )
+
+INSERT INTO dbo.SpecialChar_To_CleanChar ([STC_FromSpecialChar], [STC_ToCleanChar], [STC_UnicodeChar])
+VALUES
+( N'À', N'A', '0x00C0' ),
+( N'Á', N'A', '0x00C1' ),
+( N'Â', N'A', '0x00C2' ),
+( N'Ã', N'A', '0x00C3' ),
+( N'Ä', N'A', '0x00C4' ),
+( N'Å', N'A', '0x00C5' ),
+( N'Æ', N'AE', '0x00C6' ),
+( N'Ç', N'C', '0x00C7' ),
+( N'È', N'E', '0x00C8' ),
+( N'É', N'E', '0x00C9' ),
+( N'Ê', N'E', '0x00CA' ),
+( N'Ë', N'E', '0x00CB' ),
+( N'Ì', N'I', '0x00CC' ),
+( N'Í', N'I', '0x00CD' ),
+( N'Î', N'I', '0x00CE' ),
+( N'Ï', N'I', '0x00CF' ),
+( N'Ñ', N'N', '0x00D1' ),
+( N'Ò', N'O', '0x00D2' ),
+( N'Ó', N'O', '0x00D3' ),
+( N'Ô', N'O', '0x00D4' ),
+( N'Õ', N'O', '0x00D5' ),
+( N'Ö', N'O', '0x00D6' ),
+( N'Ø', N'O', '0x00D8' ),
+( N'Ù', N'U', '0x00D9' ),
+( N'Ú', N'U', '0x00DA' ),
+( N'Û', N'U', '0x00DB' ),
+( N'Ü', N'U', '0x00DC' ),
+( N'ß', N'ss', '0x00DF' ),
+( N'à', N'a', '0x00E0' ),
+( N'á', N'a', '0x00E1' ),
+( N'â', N'a', '0x00E2' ),
+( N'ã', N'a', '0x00E3' ),
+( N'ä', N'a', '0x00E4' ),
+( N'å', N'a', '0x00E5' ),
+( N'æ', N'ae', '0x00E6' ),
+( N'ç', N'c', '0x00E7' ),
+( N'è', N'e', '0x00E8' ),
+( N'é', N'e', '0x00E9' ),
+( N'ê', N'e', '0x00EA' ),
+( N'ë', N'e', '0x00EB' ),
+( N'ì', N'i', '0x00EC' ),
+( N'í', N'i', '0x00ED' ),
+( N'î', N'i', '0x00EE' ),
+( N'ï', N'i', '0x00EF' ),
+( N'ñ', N'n', '0x00F1' ),
+( N'ò', N'o', '0x00F2' ),
+( N'ó', N'o', '0x00F3' ),
+( N'ô', N'o', '0x00F4' ),
+( N'õ', N'o', '0x00F5' ),
+( N'ö', N'o', '0x00F6' ),
+( N'ø', N'o', '0x00F8' ),
+( N'ù', N'u', '0x00F9' ),
+( N'ú', N'u', '0x00FA' ),
+( N'û', N'u', '0x00FB' ),
+( N'ü', N'u', '0x00FC' ),
+( N'Ă', N'A', '0x0102' ),
+( N'ă', N'a', '0x0103' ),
+( N'Ş', N'S', '0x015E' ),
+( N'ş', N's', '0x015F' ),
+( N'Ţ', N'T', '0x0162' ),
+( N'ţ', N't', '0x0163' ),
+( N'Ț', N'T', '0x021A' ),
+( N'ț', N't', '0x021B' ),
+( N'Ș', N'S', '0x0218' ),
+( N'ș', N's', '0x0219' ),
+( N'ÿ', N'y', '0x00FF' ),
+( N'Ÿ', N'Y', '159' ),
+( N'°', N'o', '0x00B0' ),
+( N'Š', N'S', '0x0160' ),
+( N'š', N's', '0x0161' )
+
+DROP TABLE dbo.SpecialChar_To_CleanChar
+
+/* Numbers table: A table containing a row for each number between 0 and... 4000 or how many are needed */
+
+
